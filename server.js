@@ -111,15 +111,22 @@ app.get('/auth/google',
 app.get('/auth/google/callback',
     passport.authenticate('google', { failureRedirect: process.env.CLIENT_URL || 'http://localhost:5173' }),
     function (req, res) {
+        console.log('OAuth callback - User authenticated:', req.user);
+        console.log('Session ID:', req.sessionID);
+        console.log('Is Authenticated:', req.isAuthenticated());
         // Successful authentication, redirect home.
         res.redirect(process.env.CLIENT_URL || 'http://localhost:5173');
     });
 
 app.get('/api/user', (req, res) => {
+    console.log('/api/user called');
+    console.log('Session ID:', req.sessionID);
+    console.log('Is Authenticated:', req.isAuthenticated());
+    console.log('User:', req.user);
     if (req.isAuthenticated()) {
         res.json({ user: req.user });
     } else {
-        res.json({ user: null });
+        res.status(401).json({ error: 'Not authenticated' });
     }
 });
 
