@@ -188,8 +188,7 @@ export default function WelcomeScreen() {
     const [isDevModalOpen, setIsDevModalOpen] = useState(false);
 
     const handleLogin = () => {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-        window.location.href = `${apiUrl}/auth/google`;
+        window.location.href = '/auth/google';
     };
 
     return (

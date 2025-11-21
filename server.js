@@ -8,7 +8,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import cors from 'cors';
 import { RAGService } from './rag.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -26,12 +25,6 @@ app.use(helmet({
 
 // Trust Proxy for Render/Heroku
 app.set('trust proxy', 1);
-
-// CORS Configuration
-app.use(cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
-    credentials: true
-}));
 
 // Rate limiting to prevent abuse
 const limiter = rateLimit({
@@ -66,8 +59,7 @@ app.use(session({
     saveUninitialized: false,
     cookie: {
         httpOnly: true, // Helps prevent XSS
-        secure: true, // Always use secure cookies (HTTPS required)
-        sameSite: 'none', // Allow cross-site cookies for Vercel <-> Render
+        secure: process.env.NODE_ENV === 'production', // Secure in production
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
 }));
@@ -102,6 +94,9 @@ const ensureAuthenticated = (req, res, next) => {
     res.status(401).json({ error: 'Unauthorized' });
 };
 
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, 'client/dist')));
+
 // API Routes
 
 // Auth Routes
@@ -109,7 +104,7 @@ app.get('/auth/google',
     passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 app.get('/auth/google/callback',
-    passport.authenticate('google', { failureRedirect: process.env.CLIENT_URL || 'http://localhost:5173' }),
+    passport.authenticate('google', { failureRedirect: '/' }),
     function (req, res) {
         console.log('OAuth callback - User authenticated:', req.user);
         console.log('Session ID:', req.sessionID);
@@ -118,10 +113,10 @@ app.get('/auth/google/callback',
         req.session.save((err) => {
             if (err) {
                 console.error('Session save error:', err);
-                return res.redirect(process.env.CLIENT_URL || 'http://localhost:5173');
+                return res.redirect('/');
             }
             console.log('Session saved successfully');
-            res.redirect(process.env.CLIENT_URL || 'http://localhost:5173');
+            res.redirect('/');
         });
     });
 
@@ -199,6 +194,11 @@ app.post('/api/chat', ensureAuthenticated, async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
+});
+
+// Catch-all route to serve index.html for client-side routing
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'client/dist', 'index.html'));
 });
 
 app.listen(port, () => {
