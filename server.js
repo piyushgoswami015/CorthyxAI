@@ -197,7 +197,8 @@ app.post('/api/chat', ensureAuthenticated, async (req, res) => {
 });
 
 // Catch-all route to serve index.html for client-side routing
-app.get('*', (req, res) => {
+// Must be last route to avoid catching API routes
+app.use((req, res) => {
     res.sendFile(path.join(__dirname, 'client/dist', 'index.html'));
 });
 
