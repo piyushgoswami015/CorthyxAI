@@ -42,6 +42,8 @@ console.log("Environment Check:");
 console.log("GOOGLE_CLIENT_ID:", process.env.GOOGLE_CLIENT_ID ? `Loaded (${process.env.GOOGLE_CLIENT_ID.substring(0, 5)}...)` : "Missing");
 console.log("GOOGLE_CLIENT_SECRET:", process.env.GOOGLE_CLIENT_SECRET ? "Loaded" : "Missing");
 console.log("SESSION_SECRET:", process.env.SESSION_SECRET ? "Loaded" : "Missing");
+console.log("GOOGLE_CALLBACK_URL:", process.env.GOOGLE_CALLBACK_URL || "NOT SET - will use relative path");
+console.log("CLIENT_URL:", process.env.CLIENT_URL || "NOT SET - will use localhost:5173");
 
 // Setup Multer
 const upload = multer({ dest: 'uploads/' });
