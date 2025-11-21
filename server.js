@@ -8,6 +8,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import cors from 'cors';
 import { RAGService } from './rag.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -25,6 +26,12 @@ app.use(helmet({
 
 // Trust Proxy for Render/Heroku
 app.set('trust proxy', 1);
+
+// CORS Configuration
+app.use(cors({
+    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    credentials: true
+}));
 
 // Rate limiting to prevent abuse
 const limiter = rateLimit({
