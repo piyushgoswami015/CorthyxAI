@@ -66,7 +66,8 @@ app.use(session({
     saveUninitialized: false,
     cookie: {
         httpOnly: true, // Helps prevent XSS
-        secure: process.env.NODE_ENV === 'production', // Secure in production
+        secure: true, // Always use secure cookies (HTTPS required)
+        sameSite: 'none', // Allow cross-site cookies for Vercel <-> Render
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
 }));
