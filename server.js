@@ -99,10 +99,10 @@ app.get('/auth/google',
     passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 app.get('/auth/google/callback',
-    passport.authenticate('google', { failureRedirect: 'http://localhost:5173' }),
+    passport.authenticate('google', { failureRedirect: process.env.CLIENT_URL || 'http://localhost:5173' }),
     function (req, res) {
         // Successful authentication, redirect home.
-        res.redirect('http://localhost:5173');
+        res.redirect(process.env.CLIENT_URL || 'http://localhost:5173');
     });
 
 app.get('/api/user', (req, res) => {
