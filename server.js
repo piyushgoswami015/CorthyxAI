@@ -134,8 +134,16 @@ app.get('/api/user', (req, res) => {
 
 app.post('/api/logout', (req, res) => {
     req.logout((err) => {
-        if (err) { return next(err); }
-        res.json({ success: true });
+        if (err) {
+            console.error('Logout error:', err);
+            return res.status(500).json({ error: 'Logout failed' });
+        }
+        req.session.destroy((err) => {
+            if (err) {
+                console.error('Session destroy error:', err);
+            }
+            res.json({ success: true });
+        });
     });
 });
 
