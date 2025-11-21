@@ -265,7 +265,21 @@ Remember: Be conversational, helpful, and cite your sources naturally. Each [SOU
             outputParser: new StringOutputParser(),
         });
 
-        const relevantDocs = await retriever.invoke(question);
+        console.log('Invoking retriever...');
+        let relevantDocs;
+        try {
+            // Add timeout to prevent hanging
+            const retrievalPromise = retriever.invoke(question);
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Retrieval timeout after 30s')), 30000)
+            );
+
+            relevantDocs = await Promise.race([retrievalPromise, timeoutPromise]);
+            console.log(`Successfully retrieved ${relevantDocs.length} documents`);
+        } catch (error) {
+            console.error('Error during retrieval:', error);
+            throw new Error(`Failed to retrieve documents: ${error.message}`);
+        }
 
         if (relevantDocs.length === 0) {
             return "I couldn't find any relevant information in your documents.";
