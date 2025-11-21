@@ -114,8 +114,15 @@ app.get('/auth/google/callback',
         console.log('OAuth callback - User authenticated:', req.user);
         console.log('Session ID:', req.sessionID);
         console.log('Is Authenticated:', req.isAuthenticated());
-        // Successful authentication, redirect home.
-        res.redirect(process.env.CLIENT_URL || 'http://localhost:5173');
+        // Explicitly save the session before redirecting
+        req.session.save((err) => {
+            if (err) {
+                console.error('Session save error:', err);
+                return res.redirect(process.env.CLIENT_URL || 'http://localhost:5173');
+            }
+            console.log('Session saved successfully');
+            res.redirect(process.env.CLIENT_URL || 'http://localhost:5173');
+        });
     });
 
 app.get('/api/user', (req, res) => {
