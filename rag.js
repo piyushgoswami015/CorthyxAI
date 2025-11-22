@@ -1,5 +1,5 @@
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
-import { CheerioWebBaseLoader } from "@langchain/community/document_loaders/web/cheerio";
+import { PuppeteerWebBaseLoader } from "@langchain/community/document_loaders/web/puppeteer";
 import { YoutubeLoader } from "@langchain/community/document_loaders/web/youtube";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { OpenAIEmbeddings, ChatOpenAI } from "@langchain/openai";
@@ -120,70 +120,54 @@ export class RAGService {
     }
 
     async ingestWeb(url, userId) {
-        console.log(`Ingesting Web: ${url} for user ${userId}`);
+        console.log(`Ingesting Website: ${url} for user ${userId}`);
 
-        // First, fetch the raw HTML
-        const response = await fetch(url);
-        const html = await response.text();
-
-        // Use Cheerio to parse HTML and extract links
-        const cheerio = await import('cheerio');
-        const $ = cheerio.load(html);
-
-        // Extract all links
-        const links = [];
-        $('a[href]').each((i, elem) => {
-            const href = $(elem).attr('href');
-            const text = $(elem).text().trim();
-
-            // Filter out empty, anchor-only, and javascript links
-            if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {
-                // Convert relative URLs to absolute
-                let absoluteUrl = href;
-                if (href.startsWith('/')) {
-                    const urlObj = new URL(url);
-                    absoluteUrl = `${urlObj.protocol}//${urlObj.host}${href}`;
-                } else if (!href.startsWith('http')) {
-                    absoluteUrl = new URL(href, url).href;
-                }
-
-                links.push({
-                    text: text || absoluteUrl,
-                    url: absoluteUrl
+        // Use Puppeteer to handle JS-heavy sites and basic bot protection
+        const loader = new PuppeteerWebBaseLoader(url, {
+            launchOptions: {
+                headless: "new",
+                args: ['--no-sandbox', '--disable-setuid-sandbox'], // Required for Render
+            },
+            gotoOptions: {
+                waitUntil: "domcontentloaded",
+                timeout: 60000, // 60s timeout for slow sites
+            },
+            async evaluate(page, browser) {
+                // Scroll to bottom to trigger lazy loading
+                await page.evaluate(async () => {
+                    await new Promise((resolve) => {
+                        let totalHeight = 0;
+                        const distance = 100;
+                        const timer = setInterval(() => {
+                            const scrollHeight = document.body.scrollHeight;
+                            window.scrollBy(0, distance);
+                            totalHeight += distance;
+                            if (totalHeight >= scrollHeight) {
+                                clearInterval(timer);
+                                resolve();
+                            }
+                        }, 100);
+                    });
                 });
-            }
+                // Return the HTML
+                return await page.content();
+            },
         });
 
-        // Now load the document using CheerioWebBaseLoader for text content
-        const loader = new CheerioWebBaseLoader(url);
         const docs = await loader.load();
-        console.log(`Loaded web page with ${links.length} links.`);
-
-        // Extract title from the loaded document if available
-        const title = docs[0]?.metadata?.title || $('title').text() || url;
-
-        // Append links to content if found
-        if (links.length > 0) {
-            const linkSection = '\n\n=== LINKS FOUND ON THIS PAGE ===\n' +
-                links.map(l => `- ${l.text}: ${l.url}`).join('\n');
-            docs[0].pageContent += linkSection;
-            console.log('Sample links extracted:', links.slice(0, 5));
-        }
+        console.log(`Loaded website content. Docs length: ${docs.length}`);
 
         const sourceMetadata = {
             sourceType: 'website',
             sourceId: `web-${Date.now()}`,
             sourceUrl: url,
-            title: title,
+            title: docs[0].metadata.title || 'Unknown Website',
             ingestedAt: new Date().toISOString(),
-            sourceDescription: `Website: "${title}" (${url})`,
-            linksCount: links.length,
+            sourceDescription: `Website: "${docs[0].metadata.title || 'Unknown Website'}" (${url})`,
         };
 
-        console.log(`Extracted ${links.length} links from website`);
-
         const chunks = await this.processDocuments(docs, userId, sourceMetadata);
-        return { success: true, chunks, linksExtracted: links.length };
+        return { success: true, chunks, linksCount: 0 }; // Links count not easily available with Puppeteer loader default
     }
 
     async ingestYouTube(url, userId) {
