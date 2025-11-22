@@ -102,13 +102,13 @@ export default function ChatArea({ messages, onSendMessage, isLoading, isReady, 
                                         ? 'bg-beige/10 dark:bg-dark-surface/50 text-charcoal/60 dark:text-slate-400 italic text-center w-full border border-beige/20 dark:border-dark-border'
                                         : 'bg-white dark:bg-dark-surface text-charcoal dark:text-slate-200 rounded-tl-none border border-beige/30 dark:border-dark-border shadow-sm'
                                     }`}>
-                                    {msg.type === 'bot' || msg.type === 'system' ? (
-                                        <>
+                                    <div className="inline">
+                                        {msg.type === 'bot' || msg.type === 'system' ? (
                                             <ReactMarkdown
                                                 remarkPlugins={[remarkGfm]}
-                                                className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5"
+                                                className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 inline"
                                                 components={{
-                                                    p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+                                                    p: ({ node, ...props }) => <p className="mb-2 last:mb-0 inline" {...props} />,
                                                     strong: ({ node, ...props }) => <strong className="font-semibold text-charcoal dark:text-white" {...props} />,
                                                     em: ({ node, ...props }) => <em className="italic" {...props} />,
                                                     code: ({ node, inline, ...props }) =>
@@ -121,13 +121,13 @@ export default function ChatArea({ messages, onSendMessage, isLoading, isReady, 
                                             >
                                                 {msg.text}
                                             </ReactMarkdown>
-                                            {msg.streaming && (
-                                                <span className="inline-block w-2 h-4 ml-1 bg-charcoal dark:bg-white animate-pulse" />
-                                            )}
-                                        </>
-                                    ) : (
-                                        msg.text
-                                    )}
+                                        ) : (
+                                            msg.text
+                                        )}
+                                        {msg.streaming && (
+                                            <span className="inline-block w-0.5 h-4 ml-0.5 bg-charcoal dark:bg-white animate-pulse align-middle" />
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </motion.div>
