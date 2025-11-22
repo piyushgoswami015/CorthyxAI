@@ -17,21 +17,24 @@ export class RAGService {
 
     async getVectorStore() {
         if (!this.vectorStore) {
-            this.vectorStore = await QdrantVectorStore.fromExistingCollection(
-                this.embeddings,
-                {
-                    url: process.env.QDRANT_URL || "http://localhost:6333",
-                    apiKey: process.env.QDRANT_API_KEY,
-                    collectionName: "rag_collection",
-                }
-            ).catch(() => null);
+            const qdrantUrl = process.env.QDRANT_URL || "http://localhost:6333";
+            console.log(`[RAG] Connecting to Qdrant at: ${qdrantUrl}`);
+            console.log(`[RAG] API Key present: ${!!process.env.QDRANT_API_KEY}`);
 
-            if (!this.vectorStore) {
-                // Create collection if it doesn't exist (implicitly handled by QdrantVectorStore.fromTexts/fromDocuments usually, but here we might need to initialize)
-                // For simplicity in this demo, we'll rely on the ingestion to create it or just use the first ingestion to set it up.
-                // Actually, let's just return a new instance pointing to the URL.
+            try {
+                this.vectorStore = await QdrantVectorStore.fromExistingCollection(
+                    this.embeddings,
+                    {
+                        url: qdrantUrl,
+                        apiKey: process.env.QDRANT_API_KEY,
+                        collectionName: "rag_collection",
+                    }
+                );
+                console.log('[RAG] Successfully connected to existing Qdrant collection');
+            } catch (e) {
+                console.log(`[RAG] Failed to connect to existing collection: ${e.message}. Creating new instance.`);
                 this.vectorStore = new QdrantVectorStore(this.embeddings, {
-                    url: process.env.QDRANT_URL || "http://localhost:6333",
+                    url: qdrantUrl,
                     apiKey: process.env.QDRANT_API_KEY,
                     collectionName: "rag_collection",
                 });
