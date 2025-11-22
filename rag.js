@@ -157,17 +157,58 @@ export class RAGService {
         const docs = await loader.load();
         console.log(`Loaded website content. Docs length: ${docs.length}`);
 
+        // Restore link extraction using Cheerio on the rendered HTML
+        const cheerio = await import('cheerio');
+        const $ = cheerio.load(docs[0].pageContent);
+        const links = [];
+
+        $('a[href]').each((i, elem) => {
+            const href = $(elem).attr('href');
+            const text = $(elem).text().trim();
+
+            // Filter out empty, anchor-only, and javascript links
+            if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {
+                // Convert relative URLs to absolute
+                let absoluteUrl = href;
+                try {
+                    if (href.startsWith('/')) {
+                        const urlObj = new URL(url);
+                        absoluteUrl = `${urlObj.protocol}//${urlObj.host}${href}`;
+                    } else if (!href.startsWith('http')) {
+                        absoluteUrl = new URL(href, url).href;
+                    }
+
+                    links.push({
+                        text: text || absoluteUrl,
+                        url: absoluteUrl
+                    });
+                } catch (e) {
+                    // Ignore invalid URLs
+                }
+            }
+        });
+
+        console.log(`Extracted ${links.length} links from website`);
+
+        // Append links to content if found
+        if (links.length > 0) {
+            const linkSection = '\n\n=== LINKS FOUND ON THIS PAGE ===\n' +
+                links.map(l => `- ${l.text}: ${l.url}`).join('\n');
+            docs[0].pageContent += linkSection;
+        }
+
         const sourceMetadata = {
             sourceType: 'website',
             sourceId: `web-${Date.now()}`,
             sourceUrl: url,
-            title: docs[0].metadata.title || 'Unknown Website',
+            title: docs[0].metadata.title || $('title').text() || 'Unknown Website',
             ingestedAt: new Date().toISOString(),
-            sourceDescription: `Website: "${docs[0].metadata.title || 'Unknown Website'}" (${url})`,
+            sourceDescription: `Website: "${docs[0].metadata.title || $('title').text() || 'Unknown Website'}" (${url})`,
+            linksCount: links.length,
         };
 
         const chunks = await this.processDocuments(docs, userId, sourceMetadata);
-        return { success: true, chunks, linksCount: 0 }; // Links count not easily available with Puppeteer loader default
+        return { success: true, chunks, linksExtracted: links.length };
     }
 
     async ingestYouTube(url, userId) {
