@@ -24,8 +24,7 @@ export default function ChatArea({ messages, onSendMessage, isLoading, isReady, 
     };
 
     return (
-        <main className="flex-1 flex flex-col bg-cream dark:bg-dark-bg relative transition-colors">
-            {/* Header */}
+        <main className="flex-1 flex flex-col bg-cream dark:bg-dark-bg relative transition-colors min-h-0 h-full overflow-hidden">{/* Header */}
             <div className="h-14 md:h-16 border-b border-beige/30 dark:border-dark-border flex items-center px-3 md:px-6 justify-between bg-white/50 dark:bg-dark-bg/80 backdrop-blur-sm z-10">
                 <div className="flex items-center gap-2 md:gap-3">
                     {/* Hamburger menu for mobile */}
@@ -70,7 +69,7 @@ export default function ChatArea({ messages, onSendMessage, isLoading, isReady, 
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4 md:space-y-6">
+            <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4 md:space-y-6 min-h-0">{/* AnimatePresence */}
                 <AnimatePresence>
                     {messages.map((msg, index) => (
                         <motion.div
@@ -157,7 +156,8 @@ export default function ChatArea({ messages, onSendMessage, isLoading, isReady, 
             </div>
 
             {/* Input */}
-            <div className="p-3 md:p-6 bg-white/50 dark:bg-dark-bg border-t border-beige/30 dark:border-dark-border backdrop-blur-sm">
+            <div className="p-3 md:p-6 bg-white/50 dark:bg-dark-bg border-t border-beige/30 dark:border-dark-border backdrop-blur-sm pb-safe"
+                style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
                 <form onSubmit={handleSubmit} className="relative max-w-4xl mx-auto group">
                     <div className="absolute inset-0 bg-gradient-to-r from-beige/20 to-charcoal/20 dark:from-purple-500/20 dark:to-blue-500/20 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition-opacity duration-500" />
                     <input
