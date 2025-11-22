@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Sparkles, Moon, Sun, Menu } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export default function ChatArea({ messages, onSendMessage, isLoading, isReady, darkMode, onToggleDarkMode, onToggleSidebar }) {
     const [input, setInput] = useState('');
@@ -35,7 +37,12 @@ export default function ChatArea({ messages, onSendMessage, isLoading, isReady, 
                         <Menu size={20} className="text-charcoal dark:text-slate-300" />
                     </button>
 
-                    <div className={`w-2 h-2 rounded-full ${isReady ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-charcoal/30 dark:bg-slate-600'}`} />
+                    <div className="relative">
+                        <div className={`w-2 h-2 rounded-full ${isReady ? 'bg-green-500' : 'bg-charcoal/30 dark:bg-slate-600'}`} />
+                        {isReady && (
+                            <div className="absolute inset-0 w-2 h-2 rounded-full bg-green-500 animate-ping opacity-75" />
+                        )}
+                    </div>
                     <span className="text-xs md:text-sm font-medium text-charcoal dark:text-slate-300">
                         {isReady ? 'Corthyx AI Ready' : 'Waiting for context...'}
                     </span>
@@ -96,7 +103,27 @@ export default function ChatArea({ messages, onSendMessage, isLoading, isReady, 
                                         ? 'bg-beige/10 dark:bg-dark-surface/50 text-charcoal/60 dark:text-slate-400 italic text-center w-full border border-beige/20 dark:border-dark-border'
                                         : 'bg-white dark:bg-dark-surface text-charcoal dark:text-slate-200 rounded-tl-none border border-beige/30 dark:border-dark-border shadow-sm'
                                     }`}>
-                                    {msg.text}
+                                    {msg.type === 'bot' || msg.type === 'system' ? (
+                                        <ReactMarkdown
+                                            remarkPlugins={[remarkGfm]}
+                                            className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5"
+                                            components={{
+                                                p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+                                                strong: ({ node, ...props }) => <strong className="font-semibold text-charcoal dark:text-white" {...props} />,
+                                                em: ({ node, ...props }) => <em className="italic" {...props} />,
+                                                code: ({ node, inline, ...props }) =>
+                                                    inline ?
+                                                        <code className="bg-beige/20 dark:bg-dark-bg px-1 py-0.5 rounded text-xs font-mono" {...props} /> :
+                                                        <code className="block bg-beige/10 dark:bg-dark-bg p-2 rounded my-2 text-xs font-mono overflow-x-auto" {...props} />,
+                                                ul: ({ node, ...props }) => <ul className="list-disc list-inside space-y-1" {...props} />,
+                                                ol: ({ node, ...props }) => <ol className="list-decimal list-inside space-y-1" {...props} />,
+                                            }}
+                                        >
+                                            {msg.text}
+                                        </ReactMarkdown>
+                                    ) : (
+                                        msg.text
+                                    )}
                                 </div>
                             </div>
                         </motion.div>
