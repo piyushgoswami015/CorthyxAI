@@ -21,10 +21,10 @@ export class RAGService {
             // Ensure port 6333 is present for Qdrant Cloud if not specified
             if (qdrantUrl.includes('cloud.qdrant.io') && !qdrantUrl.includes(':6333')) {
                 console.log('[RAG] Appending port 6333 to Qdrant Cloud URL');
-                qdrantUrl = `${qdrantUrl}: 6333`;
+                qdrantUrl = `${qdrantUrl}:6333`;
             }
-            console.log(`[RAG] Connecting to Qdrant at: ${qdrantUrl} `);
-            console.log(`[RAG] API Key present: ${!!process.env.QDRANT_API_KEY} `);
+            console.log(`[RAG] Connecting to Qdrant at: ${qdrantUrl}`);
+            console.log(`[RAG] API Key present: ${!!process.env.QDRANT_API_KEY}`);
 
             try {
                 this.vectorStore = await QdrantVectorStore.fromExistingCollection(
@@ -43,6 +43,20 @@ export class RAGService {
                     apiKey: process.env.QDRANT_API_KEY,
                     collectionName: "rag_collection",
                 });
+            }
+
+            // Ensure index exists for userId filtering
+            try {
+                const client = this.vectorStore.client;
+                await client.createPayloadIndex("rag_collection", {
+                    field_name: "metadata.userId",
+                    field_schema: "keyword",
+                    wait: true,
+                });
+                console.log('[RAG] Verified/Created payload index for metadata.userId');
+            } catch (e) {
+                // Ignore error if index already exists or other minor issues
+                console.log(`[RAG] Note on index creation: ${e.message}`);
             }
         }
         return this.vectorStore;
