@@ -1,5 +1,5 @@
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
-import { PuppeteerWebBaseLoader } from "@langchain/community/document_loaders/web/puppeteer";
+import { CheerioWebBaseLoader } from "@langchain/community/document_loaders/web/cheerio";
 import { YoutubeLoader } from "@langchain/community/document_loaders/web/youtube";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { OpenAIEmbeddings, ChatOpenAI } from "@langchain/openai";
@@ -120,48 +120,18 @@ export class RAGService {
     }
 
     async ingestWeb(url, userId) {
-        console.log(`Ingesting Website: ${url} for user ${userId}`);
+        console.log(`Ingesting Web: ${url} for user ${userId}`);
 
-        // Use Puppeteer to handle JS-heavy sites and basic bot protection
-        const loader = new PuppeteerWebBaseLoader(url, {
-            launchOptions: {
-                headless: "new",
-                args: ['--no-sandbox', '--disable-setuid-sandbox'], // Required for Render
-            },
-            gotoOptions: {
-                waitUntil: "domcontentloaded",
-                timeout: 60000, // 60s timeout for slow sites
-            },
-            async evaluate(page, browser) {
-                // Scroll to bottom to trigger lazy loading
-                await page.evaluate(async () => {
-                    await new Promise((resolve) => {
-                        let totalHeight = 0;
-                        const distance = 100;
-                        const timer = setInterval(() => {
-                            const scrollHeight = document.body.scrollHeight;
-                            window.scrollBy(0, distance);
-                            totalHeight += distance;
-                            if (totalHeight >= scrollHeight) {
-                                clearInterval(timer);
-                                resolve();
-                            }
-                        }, 100);
-                    });
-                });
-                // Return the HTML
-                return await page.content();
-            },
-        });
+        // First, fetch the raw HTML
+        const response = await fetch(url);
+        const html = await response.text();
 
-        const docs = await loader.load();
-        console.log(`Loaded website content. Docs length: ${docs.length}`);
-
-        // Restore link extraction using Cheerio on the rendered HTML
+        // Use Cheerio to parse HTML and extract links
         const cheerio = await import('cheerio');
-        const $ = cheerio.load(docs[0].pageContent);
-        const links = [];
+        const $ = cheerio.load(html);
 
+        // Extract all links
+        const links = [];
         $('a[href]').each((i, elem) => {
             const href = $(elem).attr('href');
             const text = $(elem).text().trim();
@@ -188,7 +158,13 @@ export class RAGService {
             }
         });
 
-        console.log(`Extracted ${links.length} links from website`);
+        // Now load the document using CheerioWebBaseLoader for text content
+        const loader = new CheerioWebBaseLoader(url);
+        const docs = await loader.load();
+        console.log(`Loaded web page with ${links.length} links.`);
+
+        // Extract title from the loaded document if available
+        const title = docs[0]?.metadata?.title || $('title').text() || 'Unknown Website';
 
         // Append links to content if found
         if (links.length > 0) {
@@ -201,11 +177,13 @@ export class RAGService {
             sourceType: 'website',
             sourceId: `web-${Date.now()}`,
             sourceUrl: url,
-            title: docs[0].metadata.title || $('title').text() || 'Unknown Website',
+            title: title,
             ingestedAt: new Date().toISOString(),
-            sourceDescription: `Website: "${docs[0].metadata.title || $('title').text() || 'Unknown Website'}" (${url})`,
+            sourceDescription: `Website: "${title}" (${url})`,
             linksCount: links.length,
         };
+
+        console.log(`Extracted ${links.length} links from website`);
 
         const chunks = await this.processDocuments(docs, userId, sourceMetadata);
         return { success: true, chunks, linksExtracted: links.length };
