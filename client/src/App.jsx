@@ -30,6 +30,20 @@ function App() {
     try {
       const response = await axios.get('/api/user');
       setUser(response.data.user);
+
+      // Check if user has uploaded data
+      try {
+        const dataCheck = await axios.get('/api/user/has-data');
+        if (dataCheck.data.hasData) {
+          setIsReady(true);
+          setMessages(prev => [
+            ...prev,
+            { type: 'system', text: 'Welcome back! Your documents are ready.' }
+          ]);
+        }
+      } catch (e) {
+        console.error('Failed to check user data status', e);
+      }
     } catch (error) {
       console.error('Auth check failed', error);
     } finally {

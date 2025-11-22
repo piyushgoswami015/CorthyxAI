@@ -390,4 +390,29 @@ Remember: Be conversational, helpful, and cite your sources naturally. Each [SOU
             throw error;
         }
     }
+
+    async hasData(userId) {
+        try {
+            const vectorStore = await this.getVectorStore();
+            const client = vectorStore.client;
+            const collectionName = 'rag_collection';
+
+            const scrollResult = await client.scroll(collectionName, {
+                filter: {
+                    must: [
+                        {
+                            key: "metadata.userId",
+                            match: { value: userId }
+                        }
+                    ]
+                },
+                limit: 1
+            });
+
+            return scrollResult.points && scrollResult.points.length > 0;
+        } catch (error) {
+            console.error(`[HAS_DATA] Error checking data for user ${userId}:`, error);
+            return false;
+        }
+    }
 }

@@ -204,6 +204,16 @@ app.post('/api/user/delete-data', ensureAuthenticated, async (req, res) => {
     }
 });
 
+app.get('/api/user/has-data', ensureAuthenticated, async (req, res) => {
+    try {
+        const hasData = await ragService.hasData(req.user.id);
+        res.json({ hasData });
+    } catch (error) {
+        console.error('Error checking user data:', error);
+        res.status(500).json({ error: 'Failed to check data status' });
+    }
+});
+
 // Chat Route
 app.post('/api/chat', ensureAuthenticated, async (req, res) => {
     const { question } = req.body;
