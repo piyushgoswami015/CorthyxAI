@@ -53,7 +53,13 @@ export class RAGService {
                     field_schema: "keyword",
                     wait: true,
                 });
-                console.log('[RAG] Verified/Created payload index for metadata.userId');
+                // Also create index for sourceType to support filtering by "video", "website", etc.
+                await client.createPayloadIndex("rag_collection", {
+                    field_name: "metadata.sourceType",
+                    field_schema: "keyword",
+                    wait: true,
+                });
+                console.log('[RAG] Verified/Created payload indexes for metadata.userId and metadata.sourceType');
             } catch (e) {
                 // Ignore error if index already exists or other minor issues
                 console.log(`[RAG] Note on index creation: ${e.message}`);
@@ -187,7 +193,10 @@ export class RAGService {
             addVideoInfo: true,
         });
         const docs = await loader.load();
-        console.log(`Loaded YouTube transcript.`);
+        console.log(`Loaded YouTube transcript. Docs length: ${docs.length}`);
+        if (docs.length > 0) {
+            console.log('First doc metadata:', JSON.stringify(docs[0].metadata, null, 2));
+        }
 
         // Extract video info from the loaded document
         const videoTitle = docs[0]?.metadata?.title || 'Unknown Video';
