@@ -133,7 +133,8 @@ export default function ChatArea({ messages, onSendMessage, isLoading, isReady, 
                         </motion.div>
                     ))}
 
-                    {isLoading && (
+
+                    {isLoading && !messages.some(msg => msg.streaming) && (
                         <motion.div
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
