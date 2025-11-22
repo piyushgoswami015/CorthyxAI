@@ -17,9 +17,14 @@ export class RAGService {
 
     async getVectorStore() {
         if (!this.vectorStore) {
-            const qdrantUrl = process.env.QDRANT_URL || "http://localhost:6333";
-            console.log(`[RAG] Connecting to Qdrant at: ${qdrantUrl}`);
-            console.log(`[RAG] API Key present: ${!!process.env.QDRANT_API_KEY}`);
+            let qdrantUrl = process.env.QDRANT_URL || "http://localhost:6333";
+            // Ensure port 6333 is present for Qdrant Cloud if not specified
+            if (qdrantUrl.includes('cloud.qdrant.io') && !qdrantUrl.includes(':6333')) {
+                console.log('[RAG] Appending port 6333 to Qdrant Cloud URL');
+                qdrantUrl = `${qdrantUrl}: 6333`;
+            }
+            console.log(`[RAG] Connecting to Qdrant at: ${qdrantUrl} `);
+            console.log(`[RAG] API Key present: ${!!process.env.QDRANT_API_KEY} `);
 
             try {
                 this.vectorStore = await QdrantVectorStore.fromExistingCollection(
@@ -67,7 +72,7 @@ export class RAGService {
             return doc;
         });
 
-        console.log(`Split into ${docsWithMetadata.length} chunks with metadata:`, sourceMetadata);
+        console.log(`Split into ${docsWithMetadata.length} chunks with metadata: `, sourceMetadata);
 
         const vectorStore = await this.getVectorStore();
         await vectorStore.addDocuments(docsWithMetadata);
@@ -84,7 +89,7 @@ export class RAGService {
         const filename = filePath.split('/').pop();
         const sourceMetadata = {
             sourceType: 'pdf',
-            sourceId: `pdf-${Date.now()}`,
+            sourceId: `pdf - ${Date.now()} `,
             filename: filename,
             ingestedAt: new Date().toISOString(),
             sourceDescription: `PDF file: "${filename}"`,
