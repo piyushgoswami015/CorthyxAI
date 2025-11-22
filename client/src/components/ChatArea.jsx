@@ -104,23 +104,28 @@ export default function ChatArea({ messages, onSendMessage, isLoading, isReady, 
                                         : 'bg-white dark:bg-dark-surface text-charcoal dark:text-slate-200 rounded-tl-none border border-beige/30 dark:border-dark-border shadow-sm'
                                     }`}>
                                     {msg.type === 'bot' || msg.type === 'system' ? (
-                                        <ReactMarkdown
-                                            remarkPlugins={[remarkGfm]}
-                                            className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5"
-                                            components={{
-                                                p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
-                                                strong: ({ node, ...props }) => <strong className="font-semibold text-charcoal dark:text-white" {...props} />,
-                                                em: ({ node, ...props }) => <em className="italic" {...props} />,
-                                                code: ({ node, inline, ...props }) =>
-                                                    inline ?
-                                                        <code className="bg-beige/20 dark:bg-dark-bg px-1 py-0.5 rounded text-xs font-mono" {...props} /> :
-                                                        <code className="block bg-beige/10 dark:bg-dark-bg p-2 rounded my-2 text-xs font-mono overflow-x-auto" {...props} />,
-                                                ul: ({ node, ...props }) => <ul className="list-disc list-inside space-y-1" {...props} />,
-                                                ol: ({ node, ...props }) => <ol className="list-decimal list-inside space-y-1" {...props} />,
-                                            }}
-                                        >
-                                            {msg.text}
-                                        </ReactMarkdown>
+                                        <>
+                                            <ReactMarkdown
+                                                remarkPlugins={[remarkGfm]}
+                                                className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5"
+                                                components={{
+                                                    p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+                                                    strong: ({ node, ...props }) => <strong className="font-semibold text-charcoal dark:text-white" {...props} />,
+                                                    em: ({ node, ...props }) => <em className="italic" {...props} />,
+                                                    code: ({ node, inline, ...props }) =>
+                                                        inline ?
+                                                            <code className="bg-beige/20 dark:bg-dark-bg px-1 py-0.5 rounded text-xs font-mono" {...props} /> :
+                                                            <code className="block bg-beige/10 dark:bg-dark-bg p-2 rounded my-2 text-xs font-mono overflow-x-auto" {...props} />,
+                                                    ul: ({ node, ...props }) => <ul className="list-disc list-inside space-y-1" {...props} />,
+                                                    ol: ({ node, ...props }) => <ol className="list-decimal list-inside space-y-1" {...props} />,
+                                                }}
+                                            >
+                                                {msg.text}
+                                            </ReactMarkdown>
+                                            {msg.streaming && (
+                                                <span className="inline-block w-2 h-4 ml-1 bg-charcoal dark:bg-white animate-pulse" />
+                                            )}
+                                        </>
                                     ) : (
                                         msg.text
                                     )}

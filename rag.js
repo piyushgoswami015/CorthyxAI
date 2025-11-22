@@ -344,6 +344,97 @@ Remember: Be conversational, helpful, and cite your sources naturally. Each [SOU
         return response;
     }
 
+    async *queryStream(question, userId) {
+        console.log(`Streaming query: "${question}" for user ${userId}`);
+
+        const vectorStore = await this.getVectorStore();
+
+        // Detect if question is about specific source type
+        const lowerQuestion = question.toLowerCase();
+        let filter = {
+            must: [
+                {
+                    key: "metadata.userId",
+                    match: { value: userId }
+                }
+            ]
+        };
+
+        // Add source type filter if detected in question
+        if (lowerQuestion.includes('youtube') || lowerQuestion.includes('video')) {
+            filter.must.push({
+                key: "metadata.sourceType",
+                match: { value: "youtube" }
+            });
+        } else if (lowerQuestion.includes('website') || lowerQuestion.includes('web page')) {
+            filter.must.push({
+                key: "metadata.sourceType",
+                match: { value: "website" }
+            });
+        } else if (lowerQuestion.includes('pdf') || lowerQuestion.includes('document')) {
+            filter.must.push({
+                key: "metadata.sourceType",
+                match: { value: "pdf" }
+            });
+        }
+
+        const retriever = vectorStore.asRetriever({
+            k: 15,
+            filter: filter
+        });
+
+        // Retrieve documents
+        let relevantDocs;
+        try {
+            const retrievalPromise = retriever.invoke(question);
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Retrieval timeout after 30s')), 30000)
+            );
+            relevantDocs = await Promise.race([retrievalPromise, timeoutPromise]);
+        } catch (error) {
+            console.error('Error during retrieval:', error);
+            throw new Error(`Failed to retrieve documents: ${error.message}`);
+        }
+
+        if (relevantDocs.length === 0) {
+            yield "I couldn't find any relevant information in your documents.";
+            return;
+        }
+
+        // Format context
+        const context = relevantDocs.map(doc => doc.pageContent).join('\n\n');
+
+        const promptText = `You are Corthyx AI, a helpful and conversational AI assistant created by Piyush Goswami.
+Founder Details: Piyush Goswami is 25 years old and lives in Bangalore, India.
+
+Answer questions based on the provided context.
+
+CRITICAL RULES:
+1. Each context chunk starts with [SOURCE: ...] - This tells you WHERE the information comes from
+2. If the question asks about a SPECIFIC source (e.g., "the YouTube video", "the website"), use ONLY chunks from that source
+3. NEVER mix information from different sources - treat each source as completely separate
+4. When answering, cite which source you're using naturally (e.g., "According to the YouTube video...", "The website mentions...")
+5. Pay special attention to the source description in [SOURCE: ...] to differentiate between similar content from different sources
+6. If you have information from MULTIPLE sources, mention ALL of them in your answer
+
+<context>
+${context}
+</context>
+
+Question: ${question}
+
+Remember: Be conversational, helpful, and cite your sources naturally. Each [SOURCE: ...] header indicates a DIFFERENT source.`;
+
+        // Stream response from OpenAI
+        const stream = await this.llm.stream(promptText);
+
+        for await (const chunk of stream) {
+            if (chunk.content) {
+                yield chunk.content;
+            }
+        }
+    }
+
     async deleteUserData(userId) {
         console.log(`[DELETE] Starting deletion for user: ${userId}`);
 

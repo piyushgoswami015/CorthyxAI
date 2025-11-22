@@ -214,15 +214,32 @@ app.get('/api/user/has-data', ensureAuthenticated, async (req, res) => {
     }
 });
 
-// Chat Route
+// Chat Route - Streaming with SSE
 app.post('/api/chat', ensureAuthenticated, async (req, res) => {
     const { question } = req.body;
     if (!question) return res.status(400).json({ error: 'Question is required' });
+
+    // Set headers for Server-Sent Events
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
     try {
-        const answer = await ragService.query(question, req.user.id);
-        res.json({ answer });
+        const stream = ragService.queryStream(question, req.user.id);
+
+        for await (const chunk of stream) {
+            // Send each chunk as an SSE event
+            res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
+        }
+
+        // Send completion event
+        res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+        res.end();
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Streaming error:', error);
+        res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+        res.end();
     }
 });
 

@@ -83,11 +83,86 @@ function App() {
     setMessages(prev => [...prev, { type: 'user', text }]);
     setIsProcessing(true);
 
+    // Add empty bot message that will be updated as stream arrives
+    const botMessageIndex = messages.length + 1; // +1 because we just added user message
+    setMessages(prev => [...prev, { type: 'bot', text: '', streaming: true }]);
+
     try {
-      const response = await axios.post('/api/chat', { question: text });
-      setMessages(prev => [...prev, { type: 'bot', text: response.data.answer }]);
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ question: text }),
+      });
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = JSON.parse(line.slice(6));
+
+            if (data.error) {
+              setMessages(prev => {
+                const newMessages = [...prev];
+                newMessages[botMessageIndex] = {
+                  type: 'bot',
+                  text: 'Sorry, something went wrong.',
+                  streaming: false
+                };
+                return newMessages;
+              });
+              break;
+            }
+
+            if (data.done) {
+              setMessages(prev => {
+                const newMessages = [...prev];
+                newMessages[botMessageIndex] = {
+                  ...newMessages[botMessageIndex],
+                  streaming: false
+                };
+                return newMessages;
+              });
+              break;
+            }
+
+            if (data.content) {
+              setMessages(prev => {
+                const newMessages = [...prev];
+                newMessages[botMessageIndex] = {
+                  type: 'bot',
+                  text: (newMessages[botMessageIndex].text || '') + data.content,
+                  streaming: true
+                };
+                return newMessages;
+              });
+            }
+          }
+        }
+      }
     } catch (error) {
-      setMessages(prev => [...prev, { type: 'bot', text: 'Sorry, something went wrong.' }]);
+      console.error('Streaming error:', error);
+      setMessages(prev => {
+        const newMessages = [...prev];
+        newMessages[botMessageIndex] = {
+          type: 'bot',
+          text: 'Sorry, something went wrong.',
+          streaming: false
+        };
+        return newMessages;
+      });
     } finally {
       setIsProcessing(false);
     }
